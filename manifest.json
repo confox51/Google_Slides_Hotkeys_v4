@@ -1,0 +1,28 @@
+{
+    "manifest_version": 3,
+    "name": "Google Slides Alignment Helper",
+    "version": "1.0",
+    "description": "Adds keyboard shortcuts for alignment in Google Slides",
+    "permissions": ["activeTab", "commands"],
+    "host_permissions": [
+      "https://docs.google.com/*"
+    ],
+    "commands": {
+      "start-listening": {
+        "suggested_key": {
+          "default": "Alt+1"
+        },
+        "description": "Start hotkey listening mode"
+      }
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "content_scripts": [
+      {
+        "matches": ["*://docs.google.com/presentation/*"],
+        "css": ["styles.css"],
+        "js": ["content.js"]
+      }
+    ]
+  }
