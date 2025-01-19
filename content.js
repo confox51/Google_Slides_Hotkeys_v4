@@ -7,8 +7,10 @@ const BUTTON_SELECTORS = {
     align: '[aria-label="Align a"]',
     alignLeft: '[aria-label="Left l"]',
     alignRight: '[aria-label="Right r"]',
-    alignTop: '[aria-label="Top t"]', // TODO: Check to see if this is correct
-    alignBottom: '[aria-label="Bottom b"]', // TODO: Check to see if this is correct
+    alignCenter: '[aria-label="Center c"]',
+    alignTop: '[aria-label="Top t"]', 
+    alignBottom: '[aria-label="Bottom b"]',
+    alignMiddle: '[aria-label="Middle m"]', 
     // Add more selectors as needed
 };
 
@@ -82,8 +84,8 @@ function alignLeft() {
     simulateClick(alignButton);
     
     // Try again after menu is open
-    const newLeftButton = findButton(BUTTON_SELECTORS.alignLeft);
-    return simulateClick(newLeftButton);
+    const newAlignLeftButton = findButton(BUTTON_SELECTORS.alignLeft);
+    return simulateClick(newAlignLeftButton);
 }
 
 function alignRight() {
@@ -105,8 +107,100 @@ function alignRight() {
     simulateClick(alignButton);
     
     // Try again after menu is open
-    const newRightButton = findButton(BUTTON_SELECTORS.alignRight);
-    return simulateClick(newRightButton);
+    const newAlignRightButton = findButton(BUTTON_SELECTORS.alignRight);
+    return simulateClick(newAlignRightButton);
+}
+
+function alignCenter() {
+    // Try direct access first
+    const alignCenterButton = findButton(BUTTON_SELECTORS.alignCenter);
+    if (alignCenterButton) {
+        return simulateClick(alignCenterButton);
+    }
+
+    // If direct access fails, go through menus
+    const arrangeButton = document.querySelector(BUTTON_SELECTORS.arrange);
+    if (!arrangeButton) return false;
+
+    simulateClick(arrangeButton);
+    
+    const alignButton = document.querySelector(BUTTON_SELECTORS.align)?.parentElement;
+    if (!alignButton) return false;
+    
+    simulateClick(alignButton);
+    
+    // Try again after menu is open
+    const newAlignCenterButton = findButton(BUTTON_SELECTORS.alignCenter);
+    return simulateClick(newAlignCenterButton);
+}
+
+function alignTop() {
+    // Try direct access first
+    const alignTopButton = findButton(BUTTON_SELECTORS.alignTop);
+    if (alignTopButton) {
+        return simulateClick(alignTopButton);
+    }
+
+    // If direct access fails, go through menus
+    const arrangeButton = document.querySelector(BUTTON_SELECTORS.arrange);
+    if (!arrangeButton) return false;
+
+    simulateClick(arrangeButton);
+    
+    const alignButton = document.querySelector(BUTTON_SELECTORS.align)?.parentElement;
+    if (!alignButton) return false;
+    
+    simulateClick(alignButton);
+    
+    // Try again after menu is open
+    const newAlignTopButton = findButton(BUTTON_SELECTORS.alignTop);
+    return simulateClick(newAlignTopButton);
+}
+
+function alignBottom() {
+    // Try direct access first
+    const alignBottomButton = findButton(BUTTON_SELECTORS.alignBottom);
+    if (alignBottomButton) {
+        return simulateClick(alignBottomButton);
+    }
+
+    // If direct access fails, go through menus
+    const arrangeButton = document.querySelector(BUTTON_SELECTORS.arrange);
+    if (!arrangeButton) return false;
+
+    simulateClick(arrangeButton);
+    
+    const alignButton = document.querySelector(BUTTON_SELECTORS.align)?.parentElement;
+    if (!alignButton) return false;
+    
+    simulateClick(alignButton);
+    
+    // Try again after menu is open
+    const newAlignBottomButton = findButton(BUTTON_SELECTORS.alignBottom);
+    return simulateClick(newAlignBottomButton);
+}
+
+function alignMiddle() {
+    // Try direct access first
+    const alignMiddleButton = findButton(BUTTON_SELECTORS.alignMiddle);
+    if (alignMiddleButton) {
+        return simulateClick(alignMiddleButton);
+    }
+
+    // If direct access fails, go through menus
+    const arrangeButton = document.querySelector(BUTTON_SELECTORS.arrange);
+    if (!arrangeButton) return false;
+
+    simulateClick(arrangeButton);
+    
+    const alignButton = document.querySelector(BUTTON_SELECTORS.align)?.parentElement;
+    if (!alignButton) return false;
+    
+    simulateClick(alignButton);
+    
+    // Try again after menu is open
+    const newAlignMiddleButton = findButton(BUTTON_SELECTORS.alignMiddle);
+    return simulateClick(newAlignMiddleButton);
 }
 
 // ===================
@@ -125,6 +219,26 @@ function handleKeyPress(event) {
         case 'r':
             console.log('Right align triggered');
             alignRight();
+            cleanup();
+            break;
+        case 'c':
+            console.log('Center align triggered');
+            alignCenter();
+            cleanup();
+            break;
+        case 't':
+            console.log('Top align triggered');
+            alignTop();
+            cleanup();
+            break;
+        case 'b':
+            console.log('Bottom align triggered');
+            alignBottom();
+            cleanup();
+            break;
+        case 'm':
+            console.log('Middle align triggered');
+            alignMiddle();
             cleanup();
             break;
         default:
