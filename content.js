@@ -11,38 +11,77 @@ popup.innerHTML = `
 popup.tabIndex = 0;
 document.body.appendChild(popup);
 
-const arrangeButton = document.querySelector('#sketchy-arrange-menu');
-console.log(arrangeButton);
+// Function to cleanup UI
+function cleanup() {
+    popup.classList.remove('show');
+}
 
+function handleKeyPress(event) {
+    console.log(event);
+    switch(event.key.toLowerCase()) {
+        case 'l':
+            console.log('L pressed');
+            let leftAlignButton = document.querySelector('[aria-label="Left l"]')?.parentElement?.parentElement;
+            if (leftAlignButton) {
+                console.log('found');
+                console.log(leftAlignButton);
+                leftAlignButton.focus();
+                leftAlignButton.dispatchEvent(createMouseEvent('mousedown', leftAlignButton));
+                leftAlignButton.dispatchEvent(createMouseEvent('mouseup', leftAlignButton));
+            } else {
+                console.log('not found');
+                const arrangeButton = document.querySelector('#sketchy-arrange-menu');
+                console.log(arrangeButton);
+                arrangeButton.focus();
+                arrangeButton.dispatchEvent(createMouseEvent('mousedown', arrangeButton));
+                arrangeButton.dispatchEvent(createMouseEvent('mouseup', arrangeButton));
+                const alignButton = document.querySelector('[aria-label="Align a"]')?.parentElement;
+                console.log(alignButton);
+                alignButton.focus();
+                alignButton.dispatchEvent(createMouseEvent('mousedown', alignButton));
+                alignButton.dispatchEvent(createMouseEvent('mouseup', alignButton));
+                leftAlignButton = document.querySelector('[aria-label="Left l"]')?.parentElement?.parentElement;
+                console.log(leftAlignButton);
+                leftAlignButton.focus();
+                leftAlignButton.dispatchEvent(createMouseEvent('mousedown', leftAlignButton));
+                leftAlignButton.dispatchEvent(createMouseEvent('mouseup', leftAlignButton));
+            }
+            cleanup();
+            break;
+    }
+}
 // Function to show popup with timeout
 function showPopup() {
     console.log('Showing alignment popup');
     popup.classList.add('show');
-    
     popup.focus();
-    popup.addEventListener('keydown', (event) => {
-        console.log(event);
-        if (event.key === 'a') {
-            console.log('A pressed');
-        }
-    });
+    popup.addEventListener('keydown', handleKeyPress);
     // Hide popup after 2 seconds
     setTimeout(() => {
         cleanup();
     }, 2000);
 }
 
+// Function to create a mouse event
+const createMouseEvent = (type, element) => {
+    const rect = element.getBoundingClientRect();
+    return new MouseEvent(type, {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        button: 0,
+        buttons: 1
+    });
+};
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Message received:', message.action);
     
     if (message.action === 'showPopup') {
         showPopup();
-    } else if (message.action === 'alignLeft') {
-        // alignObjectsLeft();
-        // testFunction();
-        cleanup();
-    }
+    };
 });
 
 // Function to check if Google Slides is ready
