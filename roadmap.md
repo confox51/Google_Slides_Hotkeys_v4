@@ -1,7 +1,6 @@
 # Roadmap
 1. Implement hotkeys to align objects
-Method 1: Try to click through the windows (use the code that Windsurf created)
-Method 2: Use the API to align objects
+Method: Click through the windows
 
 2. Implement hotkeys to resize objects
 Method: Use Google Slides API to resize objects.

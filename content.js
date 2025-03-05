@@ -21,17 +21,51 @@ const popup = document.createElement('div');
 popup.className = 'extension-popup';
 popup.innerHTML = `
     <h2>Alignment Mode Active</h2>
-    <p>Press a button for an action</p>
+    <p>Press a key:</p>
+    <ul class="shortcut-list">
+        <li><strong>L</strong> - Left align</li>
+        <li><strong>R</strong> - Right align</li>
+        <li><strong>C</strong> - Center align</li>
+        <li><strong>T</strong> - Top align</li>
+        <li><strong>B</strong> - Bottom align</li>
+        <li><strong>M</strong> - Middle align</li>
+        <li><strong>W</strong> - Change width</li>
+    </ul>
     <div class="timer-bar"></div>
 `;
 popup.tabIndex = 0;
 document.body.appendChild(popup);
+
+// Create width input popup (hidden by default)
+const widthPopup = document.createElement('div');
+widthPopup.className = 'extension-popup width-popup';
+widthPopup.innerHTML = `
+    <h2>Width</h2>
+    <div class="input-container">
+        <input type="number" id="width-input" step="0.1" min="0.01" placeholder="Enter width in inches">
+        <span class="unit">in</span>
+    </div>
+    <p class="small-text">Press Enter to apply</p>
+    <div id="width-status" class="status-message"></div>
+`;
+widthPopup.tabIndex = 0;
+document.body.appendChild(widthPopup);
 
 // ===================
 // UI Utilities
 // ===================
 function cleanup() {
     popup.classList.remove('show');
+}
+
+function cleanupWidthPopup() {
+    widthPopup.classList.remove('show');
+    widthPopup.removeEventListener('keydown', handleWidthInputKeyPress);
+    const widthInput = document.getElementById('width-input');
+    if (widthInput) {
+        widthInput.value = '';
+    }
+    updateWidthStatus('');
 }
 
 function createMouseEvent(type, element) {
@@ -241,6 +275,11 @@ function handleKeyPress(event) {
             alignMiddle();
             cleanup();
             break;
+        case 'w':
+            console.log('Width adjustment triggered');
+            showWidthInputPopup();
+            // We don't clean up here as we want to switch to the width popup
+            break;
         default:
             console.log(`Unmapped key: ${event.key}`);
     }
@@ -252,10 +291,395 @@ function showPopup() {
     popup.focus();
     popup.addEventListener('keydown', handleKeyPress);
     
-    setTimeout(() => {
+    // Clear any existing timeout
+    if (window.popupTimeoutId) {
+        clearTimeout(window.popupTimeoutId);
+    }
+    
+    // Set a new timeout
+    window.popupTimeoutId = setTimeout(() => {
         cleanup();
         // popup.removeEventListener('keydown', handleKeyPress);
     }, POPUP_TIMEOUT);
+}
+
+function showWidthInputPopup() {
+    console.log('Showing width input popup');
+    
+    // Hide the alignment popup
+    cleanup();
+    
+    // Show width popup
+    widthPopup.classList.add('show');
+    
+    // Reset status message
+    updateWidthStatus('');
+    
+    // Focus the input field
+    setTimeout(() => {
+        const widthInput = document.getElementById('width-input');
+        widthInput.focus();
+    }, 50);
+    
+    // Add event listener for keydown
+    widthPopup.addEventListener('keydown', handleWidthInputKeyPress);
+}
+
+function handleWidthInputKeyPress(event) {
+    console.log('Key pressed in width input popup:', event.key);
+    
+    if (event.key === 'Enter') {
+        const widthInput = document.getElementById('width-input');
+        const widthValue = widthInput.value;
+        console.log('Width value:', widthValue);
+        
+        if (!widthValue || isNaN(parseFloat(widthValue))) {
+            updateWidthStatus('Please enter a valid number', 'error');
+            return;
+        }
+        
+        // Show loading status
+        updateWidthStatus('Applying width...', 'loading');
+        
+        // Apply the width to the selected element
+        changeElementWidth(widthValue);
+        
+        // We don't clean up here as the changeElementWidth function will handle it
+    } else if (event.key === 'Escape') {
+        // Allow closing without applying changes
+        cleanupWidthPopup();
+    }
+}
+
+// Function to update status message in width popup
+function updateWidthStatus(message, type = '') {
+    const statusElement = document.getElementById('width-status');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.className = 'status-message';
+        if (type) {
+            statusElement.classList.add(type);
+        }
+    }
+}
+
+// ===================
+// Width Change Action
+// ===================
+function changeElementWidth(width) {
+    console.log('Changing width to:', width);
+    
+    // Check if multiple objects are selected
+    const multipleSelectionIndicator = document.querySelector('.docs-material-menu-button-flat-default-caption');
+    const isMultipleSelection = multipleSelectionIndicator && multipleSelectionIndicator.textContent.includes('objects');
+    
+    if (isMultipleSelection) {
+        console.log('Multiple objects detected, applying width to each individually');
+        updateWidthStatus('Applying width to multiple objects...', 'loading');
+        
+        // Store the current selection state by taking a screenshot of the current state
+        // We'll use this to reselect everything later
+        
+        // First, deselect everything by clicking on an empty area of the slide
+        // Find the slide canvas
+        const slideCanvas = document.querySelector('.punch-viewer-content');
+        if (slideCanvas) {
+            // Click in a likely empty area (top-left corner)
+            const emptyAreaClick = new MouseEvent('mousedown', {
+                bubbles: true,
+                cancelable: true,
+                clientX: 10,
+                clientY: 10,
+                button: 0
+            });
+            slideCanvas.dispatchEvent(emptyAreaClick);
+            slideCanvas.dispatchEvent(new MouseEvent('mouseup', {
+                bubbles: true,
+                cancelable: true,
+                clientX: 10,
+                clientY: 10,
+                button: 0
+            }));
+            
+            // Now we need to find all objects on the slide
+            // This is challenging without direct API access, but we can try to find them through the UI
+            
+            // Get all selectable elements on the slide
+            // This selector might need adjustment based on the actual DOM structure
+            const selectableElements = document.querySelectorAll('.punch-viewer-svgpage-content g[aria-label]');
+            
+            if (selectableElements && selectableElements.length > 0) {
+                console.log(`Found ${selectableElements.length} potential objects to resize`);
+                
+                // Process each element one by one
+                let processedCount = 0;
+                
+                const processNextElement = (index) => {
+                    if (index >= selectableElements.length) {
+                        // All elements processed, show success message
+                        updateWidthStatus(`Width applied to ${processedCount} objects!`, 'success');
+                        setTimeout(cleanupWidthPopup, 2000);
+                        return;
+                    }
+                    
+                    const element = selectableElements[index];
+                    
+                    // Click to select this element
+                    const rect = element.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        // Click in the center of the element
+                        const selectClick = new MouseEvent('mousedown', {
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: rect.left + rect.width / 2,
+                            clientY: rect.top + rect.height / 2,
+                            button: 0
+                        });
+                        element.dispatchEvent(selectClick);
+                        element.dispatchEvent(new MouseEvent('mouseup', {
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: rect.left + rect.width / 2,
+                            clientY: rect.top + rect.height / 2,
+                            button: 0
+                        }));
+                        
+                        // Wait a bit for the selection to take effect
+                        setTimeout(() => {
+                            // Apply width to this element
+                            const widthInput = document.querySelector('[aria-label="Width, measured in inches. Value must be between 0.01 and 58712"]');
+                            
+                            if (widthInput) {
+                                // Apply width
+                                applyWidthValue(widthInput, width);
+                                processedCount++;
+                                
+                                // Wait for the width to be applied
+                                setTimeout(() => {
+                                    // Deselect by clicking in an empty area again
+                                    slideCanvas.dispatchEvent(emptyAreaClick);
+                                    slideCanvas.dispatchEvent(new MouseEvent('mouseup', {
+                                        bubbles: true,
+                                        cancelable: true,
+                                        clientX: 10,
+                                        clientY: 10,
+                                        button: 0
+                                    }));
+                                    
+                                    // Process the next element
+                                    setTimeout(() => {
+                                        updateWidthStatus(`Processing object ${index + 1}/${selectableElements.length}...`, 'loading');
+                                        processNextElement(index + 1);
+                                    }, 100);
+                                }, 200);
+                            } else {
+                                // Width input not found, skip this element
+                                console.log(`Width input not found for element ${index}, skipping`);
+                                // Deselect and move to next
+                                slideCanvas.dispatchEvent(emptyAreaClick);
+                                slideCanvas.dispatchEvent(new MouseEvent('mouseup', {
+                                    bubbles: true,
+                                    cancelable: true,
+                                    clientX: 10,
+                                    clientY: 10,
+                                    button: 0
+                                }));
+                                
+                                setTimeout(() => {
+                                    updateWidthStatus(`Processing object ${index + 1}/${selectableElements.length}...`, 'loading');
+                                    processNextElement(index + 1);
+                                }, 100);
+                            }
+                        }, 200);
+                    } else {
+                        // Element has no size, skip it
+                        processNextElement(index + 1);
+                    }
+                };
+                
+                // Start processing elements
+                processNextElement(0);
+                return true;
+            } else {
+                console.error('No selectable elements found on slide');
+                updateWidthStatus('Could not find objects on slide', 'error');
+                setTimeout(cleanupWidthPopup, 2000);
+                return false;
+            }
+        } else {
+            console.error('Slide canvas not found');
+            updateWidthStatus('Slide canvas not found', 'error');
+            setTimeout(cleanupWidthPopup, 2000);
+            return false;
+        }
+    }
+    
+    // If not multiple selection, proceed with the original logic
+    // First, try to find the width input field directly
+    let widthInput = document.querySelector('[aria-label="Width, measured in inches. Value must be between 0.01 and 58712"]');
+    
+    // If width input is not found, we need to open the Format Options panel
+    if (!widthInput) {
+        updateWidthStatus('Opening format options...', 'loading');
+        console.log('Width input field not found, opening Format Options');
+        
+        // Try to find and click the Format Options button
+        const formatOptionsButton = document.querySelector('[aria-label="Format options"]');
+        if (!formatOptionsButton) {
+            console.error('Format Options button not found, trying Format menu');
+            updateWidthStatus('Trying alternative method...', 'loading');
+            
+            // Try alternative approach via Format menu
+            return openFormatMenuAndSetWidth(width);
+        }
+        
+        // Click the Format Options button
+        simulateClick(formatOptionsButton);
+        
+        // Use a retry mechanism to find the width input after the panel opens
+        let retryCount = 0;
+        const maxRetries = 10;
+        const retryInterval = 100; // ms
+        
+        const findWidthInputAndApply = () => {
+            retryCount++;
+            console.log(`Attempt ${retryCount} to find width input`);
+            updateWidthStatus(`Looking for width input (${retryCount}/${maxRetries})...`, 'loading');
+            
+            // Try to find the Size & Position section if it's not already open
+            const sizePositionSection = Array.from(document.querySelectorAll('.goog-zippy-header')).find(
+                el => el.textContent.includes('Size & Position')
+            );
+            
+            if (sizePositionSection && !sizePositionSection.parentElement.classList.contains('goog-zippy-expanded')) {
+                simulateClick(sizePositionSection);
+            }
+            
+            // Try to find the width input again
+            widthInput = document.querySelector('[aria-label="Width, measured in inches. Value must be between 0.01 and 58712"]');
+            
+            if (widthInput) {
+                console.log('Width input found, applying value');
+                updateWidthStatus('Width input found!', 'success');
+                applyWidthValue(widthInput, width);
+                return true;
+            } else if (retryCount < maxRetries) {
+                // Try again after a short delay
+                setTimeout(findWidthInputAndApply, retryInterval);
+                return true;
+            } else {
+                console.error('Width input field not found after maximum retries, trying Format menu');
+                updateWidthStatus('Trying alternative method...', 'loading');
+                // Try alternative approach via Format menu
+                return openFormatMenuAndSetWidth(width);
+            }
+        };
+        
+        // Start the retry process
+        setTimeout(findWidthInputAndApply, retryInterval);
+        return true;
+    }
+    
+    // If we found the width input directly, apply the width value immediately
+    updateWidthStatus('Width input found!', 'success');
+    return applyWidthValue(widthInput, width);
+}
+
+// Alternative approach to access width input via Format menu
+function openFormatMenuAndSetWidth(width) {
+    // Click on Format menu
+    const formatMenu = document.querySelector('#docs-format-menu');
+    if (!formatMenu) {
+        console.error('Format menu not found');
+        updateWidthStatus('Format menu not found', 'error');
+        setTimeout(cleanupWidthPopup, 2000);
+        return false;
+    }
+    
+    simulateClick(formatMenu);
+    
+    // Use a retry mechanism to find and click Size & Position
+    let retryCount = 0;
+    const maxRetries = 10;
+    const retryInterval = 100; // ms
+    
+    const findSizePositionAndClick = () => {
+        retryCount++;
+        updateWidthStatus(`Looking for Size & Position (${retryCount}/${maxRetries})...`, 'loading');
+        
+        // Look for Size & Position menu item
+        const menuItems = Array.from(document.querySelectorAll('.goog-menuitem'));
+        const sizePositionItem = menuItems.find(item => {
+            const text = item.textContent || '';
+            return text.includes('Size & position');
+        });
+        
+        if (sizePositionItem) {
+            simulateClick(sizePositionItem);
+            updateWidthStatus('Size & Position found!', 'success');
+            
+            // Now try to find the width input with another retry mechanism
+            let inputRetryCount = 0;
+            const findWidthInput = () => {
+                inputRetryCount++;
+                updateWidthStatus(`Looking for width input (${inputRetryCount}/${maxRetries})...`, 'loading');
+                const widthInput = document.querySelector('[aria-label="Width, measured in inches. Value must be between 0.01 and 58712"]');
+                
+                if (widthInput) {
+                    updateWidthStatus('Width input found!', 'success');
+                    applyWidthValue(widthInput, width);
+                    return true;
+                } else if (inputRetryCount < maxRetries) {
+                    setTimeout(findWidthInput, retryInterval);
+                    return true;
+                } else {
+                    console.error('Width input not found after opening Size & Position');
+                    updateWidthStatus('Could not find width input', 'error');
+                    setTimeout(cleanupWidthPopup, 2000);
+                    return false;
+                }
+            };
+            
+            setTimeout(findWidthInput, retryInterval);
+            return true;
+        } else if (retryCount < maxRetries) {
+            setTimeout(findSizePositionAndClick, retryInterval);
+            return true;
+        } else {
+            console.error('Size & Position menu item not found');
+            updateWidthStatus('Size & Position not found', 'error');
+            setTimeout(cleanupWidthPopup, 2000);
+            return false;
+        }
+    };
+    
+    setTimeout(findSizePositionAndClick, retryInterval);
+    return true;
+}
+
+// Helper function to apply the width value to an input field
+function applyWidthValue(inputElement, width) {
+    // Set value and dispatch input event
+    inputElement.value = width;
+    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Force focus on the input to ensure the value is applied
+    inputElement.focus();
+    
+    // Simulate pressing Enter to apply the change
+    const enterEvent = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'Enter',
+        keyCode: 13
+    });
+    inputElement.dispatchEvent(enterEvent);
+    
+    // Show success message and clean up after a delay
+    updateWidthStatus('Width changed successfully!', 'success');
+    setTimeout(cleanupWidthPopup, 1000);
+    
+    return true;
 }
 
 // ===================
